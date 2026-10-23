@@ -1,0 +1,13 @@
+[Unit]
+Description=Voyager layer overlay
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/workspace/voyager-layer-overlay/run.sh --layout 6qlKr
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
