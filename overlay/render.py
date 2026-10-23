@@ -8,6 +8,7 @@ from .layout import Key, Layout
 PADDING = 0.34
 HEADER = 0.62
 ACCENTS = ("#6ea8fe", "#f7a072", "#8bd450", "#e879f9", "#facc15", "#5eead4")
+FONT = "DejaVu Sans"
 
 
 def panel_size(unit: int) -> tuple[int, int]:
@@ -35,9 +36,6 @@ def _rounded(cr, x, y, width, height, radius):
     cr.arc(x + radius, y + height - radius, radius, math.pi / 2, math.pi)
     cr.arc(x + radius, y + radius, radius, math.pi, 3 * math.pi / 2)
     cr.close_path()
-
-
-FONT = "DejaVu Sans"
 
 
 def _fit(cr, text: str, max_width: float, size: float, minimum: float = 6.0) -> float:
@@ -83,7 +81,9 @@ def _centered(cr, text: str, x: float, width: float, y: float) -> None:
     cr.show_text(text)
 
 
-def _draw_key(cr, key: Key, base_key: Key, x: float, y: float, size: float, unit: int, accent) -> None:
+def _draw_key(
+    cr, key: Key, base_key: Key, x: float, y: float, size: float, unit: int, accent, flash: float = 0.0
+) -> None:
     transparent = key.transparent or not key.tap.label
     _rounded(cr, x, y, size, size, unit * 0.13)
     if transparent:
@@ -93,8 +93,11 @@ def _draw_key(cr, key: Key, base_key: Key, x: float, y: float, size: float, unit
     else:
         cr.set_source_rgba(1, 1, 1, 0.08)
     cr.fill_preserve()
-    cr.set_source_rgba(1, 1, 1, 0.10)
-    cr.set_line_width(1.0)
+    if flash > 0:
+        cr.set_source_rgba(*accent, 0.70 * flash)
+        cr.fill_preserve()
+    cr.set_source_rgba(1, 1, 1, 0.10 + 0.75 * flash)
+    cr.set_line_width(1.0 + flash)
     cr.stroke()
 
     label = key.tap.label
@@ -113,7 +116,15 @@ def _draw_key(cr, key: Key, base_key: Key, x: float, y: float, size: float, unit
         _centered(cr, key.hold.label, x, size, y + size * 0.84)
 
 
-def draw_panel(cr, layout: Layout, layer_index: int, unit: int, slots: list[Slot], clear: bool = True) -> None:
+def draw_panel(
+    cr,
+    layout: Layout,
+    layer_index: int,
+    unit: int,
+    slots: list[Slot],
+    clear: bool = True,
+    flashes: dict[int, float] | None = None,
+) -> None:
     if layer_index >= len(layout.layers):
         return
     width, height = panel_size(unit)
@@ -128,7 +139,7 @@ def draw_panel(cr, layout: Layout, layer_index: int, unit: int, slots: list[Slot
         cr.set_operator(cairo.OPERATOR_OVER)
 
     _rounded(cr, 0, 0, width, height, unit * 0.28)
-    cr.set_source_rgba(0.07, 0.08, 0.10, 0.93)
+    cr.set_source_rgba(0.07, 0.08, 0.10, 0.67)
     cr.fill_preserve()
     cr.set_source_rgba(*accent, 0.45)
     cr.set_line_width(1.5)
@@ -159,6 +170,7 @@ def draw_panel(cr, layout: Layout, layer_index: int, unit: int, slots: list[Slot
             unit * 0.92,
             unit,
             accent,
+            (flashes or {}).get(slot.index, 0.0),
         )
 
 

@@ -1,5 +1,4 @@
 import threading
-import time
 from pathlib import Path
 
 import grpc
@@ -67,15 +66,15 @@ class LayerPoller(threading.Thread):
         self.on_status = on_status
         self.interval = interval
         self.retry = retry
-        self._stop = threading.Event()
+        self._stopped = threading.Event()
         self._last_layer: int | None = None
         self._last_error: str | None = None
 
     def stop(self):
-        self._stop.set()
+        self._stopped.set()
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stopped.is_set():
             try:
                 layer = self.client.current_layer()
             except KeymappUnavailable as error:
@@ -83,8 +82,10 @@ class LayerPoller(threading.Thread):
                 if message != self._last_error:
                     self._last_error = message
                     self.on_status(message)
-                self._last_layer = None
-                self._stop.wait(self.retry)
+                if self._last_layer is not None:
+                    self._last_layer = None
+                    self.on_layer(None)
+                self._stopped.wait(self.retry)
                 continue
             if self._last_error is not None:
                 self._last_error = None
@@ -92,4 +93,4 @@ class LayerPoller(threading.Thread):
             if layer != self._last_layer:
                 self._last_layer = layer
                 self.on_layer(layer)
-            self._stop.wait(self.interval)
+            self._stopped.wait(self.interval)

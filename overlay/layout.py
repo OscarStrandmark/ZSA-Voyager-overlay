@@ -56,6 +56,17 @@ PRETTY = {
     "MO": "MO",
 }
 
+MODIFIERS = {
+    "leftCtrl": "Ctrl",
+    "rightCtrl": "Ctrl",
+    "leftShift": "Shift",
+    "rightShift": "Shift",
+    "leftAlt": "Alt",
+    "rightAlt": "AltGr",
+    "leftGui": "Super",
+    "rightGui": "Super",
+}
+
 
 def _prettify(code: str) -> str:
     body = re.sub(r"^(KC|QK|RGB|KC_MEDIA|KC_AUDIO)_", "", code)
@@ -86,6 +97,7 @@ DEFAULT_DB = Path.home() / ".config" / ".keymapp" / "keymapp.sqlite3"
 class Cap:
     label: str = ""
     layer: int | None = None
+    code: str = ""
 
 
 @dataclass(frozen=True)
@@ -171,10 +183,10 @@ def _cap(slot: dict | None, labels: dict[str, str]) -> Cap:
     if layer is not None:
         label = f"{label or code}{layer}"
     modifiers = slot.get("modifiers") or {}
-    active = [name for name, on in modifiers.items() if on is True]
+    active = list(dict.fromkeys(MODIFIERS.get(name, name) for name, on in modifiers.items() if on is True))
     if active and label:
-        label = "+".join(short.capitalize()[:4] for short in active) + " " + label
-    return Cap(label=label, layer=layer)
+        label = "+".join(active) + " " + label
+    return Cap(label=label, layer=layer, code=code)
 
 
 def load_layout(
@@ -208,7 +220,7 @@ def load_layout(
             hold = _cap(raw_key.get("hold"), labels)
             custom = raw_key.get("customLabel")
             if custom:
-                tap = Cap(label=custom, layer=tap.layer)
+                tap = Cap(label=custom, layer=tap.layer, code=tap.code)
             transparent = (raw_key.get("tap") or {}).get("code") == "KC_TRANSPARENT"
             keys.append(Key(tap=tap, hold=hold, transparent=transparent))
         layers.append(
