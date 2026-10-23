@@ -40,31 +40,61 @@ that Keymapp last cached.
 - PyGObject and GTK 3 (`sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0`)
 - Membership of the `input` group, for the press flash only
 
-## Install
+## Installation
 
-1. Run `./setup.sh`. It creates `.venv` and generates the gRPC stubs from `proto/keymapp.proto`.
-2. Open Keymapp.
-3. Go to the config page.
-4. Enable the API.
-5. Restart Keymapp.
-6. Confirm that `~/.config/.keymapp/keymapp.sock` exists.
+### 1. Install the system packages
 
-Enable the press flash:
+1. Run `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0`.
+2. Install [Keymapp](https://www.zsa.io/flash) 1.3.2 or later.
+
+### 2. Clone and set up the project
+
+You can clone the repository to any directory.
+
+1. Run `git clone git@github.com:OscarStrandmark/ZSA-Voyager-overlay.git`.
+2. Run `cd ZSA-Voyager-overlay`.
+3. Run `./setup.sh`. It creates `.venv` and generates the gRPC stubs from `proto/keymapp.proto`.
+
+### 3. Enable the Keymapp API
+
+1. Open Keymapp.
+2. Go to the config page.
+3. Enable the API.
+4. Restart Keymapp.
+5. Confirm that `~/.config/.keymapp/keymapp.sock` exists.
+
+### 4. Enable the press flash (optional)
+
+The overlay runs without this step. It prints one line to stderr and skips the
+flash.
 
 1. Run `sudo usermod -aG input $USER`.
 2. Log out and log back in.
 3. Run `id -nG` and confirm that `input` is listed.
 
-The overlay runs without the `input` group. It prints one line to stderr and
-skips the flash.
+### 5. Check the overlay
+
+1. Run `./run.sh --list-layouts`.
+2. Find the hash of your layout in the `layout=` column.
+3. Run `./run.sh --test-layer 1 --layout <hash>`.
+4. Confirm that the overlay shows layer 1.
+5. Press Ctrl+C to close it.
+
+### 6. Install the service
+
+The service starts the overlay at login. See [Autostart](#autostart).
+
+1. Run `./install-service.sh --layout <hash>`.
+2. Hold a layer key and confirm that the overlay appears.
 
 ## Run
 
-1. List the cached layouts with `./run.sh --list-layouts`.
-2. Start the overlay with `./run.sh --layout <hash>`, for example `./run.sh --layout 6qlKr`.
-3. Hold a layer key. The overlay shows that layer.
-4. Press a key. That key flashes in the layer color.
-5. Release the layer key. The overlay hides.
+Run the overlay in the foreground, without the service:
+
+1. Run `./run.sh --layout <hash>`, for example `./run.sh --layout 6qlKr`.
+2. Hold a layer key. The overlay shows that layer.
+3. Press a key. That key flashes in the layer color.
+4. Release the layer key. The overlay hides.
 
 Preview one layer without Keymapp:
 
@@ -103,14 +133,15 @@ The overlay runs as a systemd user service. It starts at login, stops at
 logout, and restarts after a crash. Keymapp autostarts separately. The poller
 retries until Keymapp is up, so the start order does not matter.
 
-The service file expects the repository at `~/workspace/voyager-layer-overlay`.
-If your clone is somewhere else, edit `ExecStart` before you install it.
+`install-service.sh` writes `~/.config/systemd/user/voyager-layer-overlay.service`
+from the template in this repository. It fills in the path of your checkout and
+the options that you give it. Then it enables and restarts the service.
 
-Install the service:
+To change the options, run `./install-service.sh` again with the new options,
+for example `./install-service.sh --layout 6qlKr --position top`.
 
-1. Copy `voyager-layer-overlay.service` to `~/.config/systemd/user/`.
-2. Run `systemctl --user daemon-reload`.
-3. Run `systemctl --user enable --now voyager-layer-overlay`.
+Caution: the service runs `run.sh` from your checkout. Run
+`./install-service.sh` again after you move or rename the checkout.
 
 Manage the service:
 
@@ -121,16 +152,16 @@ Manage the service:
 | Disable autostart | `systemctl --user disable --now voyager-layer-overlay` |
 | Read the logs | `journalctl --user -u voyager-layer-overlay -f` |
 
-Change the options:
+Uninstall the service:
 
-1. Edit `ExecStart` in `~/.config/systemd/user/voyager-layer-overlay.service`.
-2. Run `systemctl --user daemon-reload`.
-3. Run `systemctl --user restart voyager-layer-overlay`.
+1. Run `systemctl --user disable --now voyager-layer-overlay`.
+2. Run `rm ~/.config/systemd/user/voyager-layer-overlay.service`.
+3. Run `systemctl --user daemon-reload`.
 
 ## Update the layout
 
 The service pins one layout with `--layout` and follows its newest cached
-revision.
+revision. Without `--layout`, it shows the newest cached layout of any kind.
 
 1. Flash the new revision from Oryx.
 2. Open Keymapp once, so it refreshes its cache.

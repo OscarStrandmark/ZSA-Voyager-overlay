@@ -5,7 +5,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/workspace/voyager-layer-overlay/run.sh --layout 6qlKr
+ExecStart="@REPO@/run.sh" @ARGS@
 Restart=on-failure
 RestartSec=5
 
